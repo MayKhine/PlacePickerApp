@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react"
 import Places from "./Places.jsx"
-
+import { sortPlacesByDistance } from "../loc.js"
 import Error from "./Error.jsx"
+import { fetchAvailablePlaces } from "../http.js"
 
 export default function AvailablePlaces({ onSelectPlace }) {
   const [availablePlaces, setAvailablePlaces] = useState([])
@@ -13,21 +14,23 @@ export default function AvailablePlaces({ onSelectPlace }) {
       setIsLoading(true)
 
       try {
-        const response = await fetch("http://localhost:3000/places")
-        const resData = await response.json()
-
-        if (!response.ok) {
-          // 200, 300  || error: 400, 500
-          throw new Error("Failed to fetch places")
-        }
-        setAvailablePlaces(resData.places)
+        const places = await fetchAvailablePlaces()
+        navigator.geolocation.getCurrentPosition((position) => {
+          const sortedPlaces = sortPlacesByDistance(
+            places,
+            position.coords.latitude,
+            position.coords.longitude
+          )
+          setAvailablePlaces(sortedPlaces)
+          setIsLoading(false)
+        })
       } catch (error) {
         setError({
           message:
             error.message || "Could not fetch places, please try again later.",
         })
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
 
     fetchPlaces()
